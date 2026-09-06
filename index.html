@@ -290,13 +290,14 @@
 
       const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
       const audio = new Audio(ttsUrl);
+      audio.playbackRate = 0.85;
       
       audio.play().catch(() => {
         if ('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = 'en-US';
-          utterance.rate = 0.9;
+          utterance.rate = 0.85;
           window.speechSynthesis.speak(utterance);
         }
       });
