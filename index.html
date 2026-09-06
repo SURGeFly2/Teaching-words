@@ -192,6 +192,7 @@
       padding: 2px 8px;
       transition: filter 0.2s ease, background 0.2s ease, color 0.2s ease;
       display: inline-block;
+      cursor: pointer;
     }
 
     .eng-word.revealed {
@@ -290,14 +291,14 @@
 
       const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
       const audio = new Audio(ttsUrl);
-      audio.playbackRate = 0.85;
+      audio.playbackRate = 0.68;
       
       audio.play().catch(() => {
         if ('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = 'en-US';
-          utterance.rate = 0.85;
+          utterance.rate = 0.68;
           window.speechSynthesis.speak(utterance);
         }
       });
@@ -373,7 +374,6 @@
       wordsData.forEach((item, index) => {
         const card = document.createElement('div');
         card.className = 'word-card';
-        card.onclick = () => toggleWord(index);
 
         const numSpan = document.createElement('span');
         numSpan.className = 'word-num';
@@ -393,6 +393,11 @@
         const engSpan = document.createElement('span');
         engSpan.className = 'eng-word' + (item.revealed ? ' revealed' : '');
         engSpan.textContent = item.eng;
+        engSpan.title = 'Нажмите, чтобы открыть или скрыть слово';
+        engSpan.onclick = event => {
+          event.stopPropagation();
+          toggleWord(index);
+        };
 
         const audioBtn = document.createElement('button');
         audioBtn.className = 'audio-btn';
