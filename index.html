@@ -146,6 +146,7 @@
       cursor: pointer;
       user-select: none;
       transition: border-color 0.2s ease, transform 0.1s ease;
+      min-height: 58px;
     }
 
     .word-card:hover {
@@ -166,9 +167,11 @@
     .word-content {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       font-size: 17px;
       flex: 1;
+      flex-wrap: wrap;
+      line-height: 1.4;
     }
 
     .ukr-word {
@@ -188,13 +191,58 @@
       border-radius: 6px;
       padding: 2px 8px;
       transition: filter 0.2s ease, background 0.2s ease, color 0.2s ease;
+      display: inline-block;
     }
 
     .eng-word.revealed {
       filter: blur(0);
       background: transparent;
       color: #a1a1aa;
-      padding: 2px 0;
+      padding: 0;
+    }
+
+    .audio-btn {
+      background: transparent;
+      border: none;
+      color: #71717a;
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s ease, background-color 0.2s ease;
+      
+      /* Сдвиг на 3px влево и 5px вверх */
+      transform: translate(-3px, -5px); 
+      flex-shrink: 0;
+    }
+
+    .audio-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      display: block;
+    }
+
+    .audio-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 30px 14px;
+      }
+      .header h1 {
+        font-size: 26px;
+      }
+      .word-card {
+        padding: 14px;
+      }
     }
   </style>
 </head>
@@ -222,6 +270,37 @@
 
   <script>
     let wordsData = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedInput = localStorage.getItem('vocab_saved_text');
+      if (savedInput) {
+        document.getElementById('wordsInput').value = savedInput;
+        generateCards();
+      }
+
+      document.getElementById('wordsInput').addEventListener('input', (e) => {
+        localStorage.setItem('vocab_saved_text', e.target.value);
+      });
+    });
+
+    function speakWord(text, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+
+      const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
+      const audio = new Audio(ttsUrl);
+      
+      audio.play().catch(() => {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.9;
+          window.speechSynthesis.speak(utterance);
+        }
+      });
+    }
 
     function parseInput() {
       const input = document.getElementById('wordsInput').value.trim();
@@ -293,7 +372,6 @@
       wordsData.forEach((item, index) => {
         const card = document.createElement('div');
         card.className = 'word-card';
-        // Клик по любой части карточки открывает/закрывает слово
         card.onclick = () => toggleWord(index);
 
         const numSpan = document.createElement('span');
@@ -315,9 +393,22 @@
         engSpan.className = 'eng-word' + (item.revealed ? ' revealed' : '');
         engSpan.textContent = item.eng;
 
+        const audioBtn = document.createElement('button');
+        audioBtn.className = 'audio-btn';
+        audioBtn.title = 'Прослушать произношение';
+        audioBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        `;
+        audioBtn.onclick = (e) => speakWord(item.eng, e);
+
         contentDiv.appendChild(ukrSpan);
         contentDiv.appendChild(dashSpan);
         contentDiv.appendChild(engSpan);
+        contentDiv.appendChild(audioBtn);
 
         card.appendChild(numSpan);
         card.appendChild(contentDiv);
