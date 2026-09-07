@@ -348,14 +348,17 @@
       audio.addEventListener('loadedmetadata', applySpeed, { once: true });
       applySpeed();
 
-      const showAudioError = () => {
-        const errorDiv = document.getElementById('error');
-        errorDiv.textContent = 'Не удалось загрузить голос Google. Проверьте интернет-соединение.';
-        errorDiv.style.display = 'block';
+      const useBrowserVoice = () => {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = speechSpeed * 0.8;
+        window.speechSynthesis.speak(utterance);
       };
 
-      audio.onerror = showAudioError;
-      audio.play().then(applySpeed).catch(showAudioError);
+      audio.onerror = useBrowserVoice;
+      audio.play().then(applySpeed).catch(useBrowserVoice);
     }
 
     function parseInput() {
