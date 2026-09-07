@@ -363,7 +363,7 @@
         audio.playbackRate = speechSpeed;
       };
       audio.addEventListener('loadedmetadata', applySpeed, { once: true });
-      audio.load();
+      applySpeed();
 
       const showAudioError = () => {
         const errorDiv = document.getElementById('error');
