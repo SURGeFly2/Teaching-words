@@ -352,13 +352,8 @@
         currentAudio.currentTime = 0;
       }
 
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-
       const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-GB&q=' + encodeURIComponent(text);
       const audio = new Audio();
-      let fallbackStarted = false;
       currentAudio = audio;
       audio.src = ttsUrl;
       audio.preload = 'auto';
@@ -370,20 +365,16 @@
       audio.addEventListener('loadedmetadata', applySpeed, { once: true });
       audio.load();
 
-      const useBrowserVoice = () => {
-        if (fallbackStarted || !('speechSynthesis' in window)) return;
-        fallbackStarted = true;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-GB';
-        utterance.rate = speechSpeed;
-        window.speechSynthesis.speak(utterance);
+      const showAudioError = () => {
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = 'Не удалось загрузить голос Google. Проверьте интернет-соединение.';
+        errorDiv.style.display = 'block';
       };
 
-      audio.addEventListener('error', useBrowserVoice, { once: true });
+      audio.addEventListener('error', showAudioError, { once: true });
       audio.play()
         .then(applySpeed)
-        .catch(useBrowserVoice);
+        .catch(showAudioError);
     }
 
     function parseInput() {
