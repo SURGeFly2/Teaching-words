@@ -118,6 +118,34 @@
       color: #ffffff;
     }
 
+    .global-speed-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px 14px;
+      color: #a1a1aa;
+      background: #0c0c0e;
+      border: 1px solid #27272a;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .global-speed-input {
+      flex: 1;
+      min-width: 80px;
+      accent-color: #ffffff;
+      cursor: pointer;
+    }
+
+    .global-speed-value {
+      min-width: 42px;
+      color: #ffffff;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
     .error-msg {
       color: #ef4444;
       background: rgba(239, 68, 68, 0.08);
@@ -144,7 +172,7 @@
       align-items: center;
       gap: 16px;
       cursor: pointer;
-      user-select: none;
+      user-select: text;
       transition: border-color 0.2s ease, transform 0.1s ease;
       min-height: 58px;
     }
@@ -170,7 +198,7 @@
       gap: 8px;
       font-size: 17px;
       flex: 1;
-      flex-wrap: wrap;
+      min-width: 0;
       line-height: 1.4;
     }
 
@@ -193,6 +221,7 @@
       transition: filter 0.2s ease, background 0.2s ease, color 0.2s ease;
       display: inline-block;
       cursor: pointer;
+      white-space: nowrap;
     }
 
     .eng-word.revealed {
@@ -207,8 +236,8 @@
       border: none;
       color: #71717a;
       cursor: pointer;
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
       padding: 0;
       border-radius: 6px;
       display: inline-flex;
@@ -217,13 +246,15 @@
       transition: color 0.2s ease, background-color 0.2s ease;
       
       /* Сдвиг на 3px влево и 5px вверх */
-      transform: translate(-3px, -5px); 
+      transform: translate(-3px, -6px);
       flex-shrink: 0;
+      order: 2;
+      margin-left: 2px;
     }
 
     .audio-btn svg {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       stroke: currentColor;
       fill: none;
       display: block;
@@ -244,6 +275,14 @@
       .word-card {
         padding: 14px;
       }
+      .word-content {
+        gap: 5px;
+        font-size: 15px;
+      }
+      .global-speed-control {
+        gap: 8px;
+        padding: 10px;
+      }
     }
   </style>
 </head>
@@ -262,6 +301,11 @@
         <button class="btn btn-main" onclick="generateCards()">Учить слова</button>
         <button class="btn btn-sub" onclick="shuffleCards()">Перемешать</button>
         <button class="btn btn-sub" id="toggleBtn" onclick="toggleRevealAll()">Открыть все</button>
+        <label class="global-speed-control" for="speedRange">
+          <span>Скорость озвучки</span>
+          <input class="global-speed-input" id="speedRange" type="range" min="0.25" max="2" step="0.25" value="0.75">
+          <span class="global-speed-value" id="speedValue">0.75x</span>
+        </label>
       </div>
     </div>
 
@@ -271,9 +315,23 @@
 
   <script>
     let wordsData = [];
+    let currentAudio = null;
+    const defaultSpeechSpeed = Math.min(2, Math.max(0.25, Math.round((Number(localStorage.getItem('vocab_speech_speed')) || 0.75) / 0.25) * 0.25));
+    let speechSpeed = defaultSpeechSpeed;
 
     window.addEventListener('DOMContentLoaded', () => {
       const savedInput = localStorage.getItem('vocab_saved_text');
+      const speedRange = document.getElementById('speedRange');
+      const speedValue = document.getElementById('speedValue');
+      speedRange.value = speechSpeed;
+      speedValue.textContent = speechSpeed.toFixed(2) + 'x';
+
+      speedRange.addEventListener('input', event => {
+        speechSpeed = Number(event.target.value);
+        speedValue.textContent = speechSpeed.toFixed(2) + 'x';
+        localStorage.setItem('vocab_speech_speed', speechSpeed);
+      });
+
       if (savedInput) {
         document.getElementById('wordsInput').value = savedInput;
         generateCards();
@@ -289,19 +347,43 @@
         event.stopPropagation();
       }
 
-      const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
-      const audio = new Audio(ttsUrl);
-      audio.playbackRate = 0.68;
-      
-      audio.play().catch(() => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'en-US';
-          utterance.rate = 0.68;
-          window.speechSynthesis.speak(utterance);
-        }
-      });
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-GB&q=' + encodeURIComponent(text);
+      const audio = new Audio();
+      let fallbackStarted = false;
+      currentAudio = audio;
+      audio.src = ttsUrl;
+      audio.preload = 'auto';
+      audio.playsInline = true;
+      audio.volume = 1;
+      const applySpeed = () => {
+        audio.playbackRate = speechSpeed;
+      };
+      audio.addEventListener('loadedmetadata', applySpeed, { once: true });
+      audio.load();
+
+      const useBrowserVoice = () => {
+        if (fallbackStarted || !('speechSynthesis' in window)) return;
+        fallbackStarted = true;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-GB';
+        utterance.rate = speechSpeed;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      audio.addEventListener('error', useBrowserVoice, { once: true });
+      audio.play()
+        .then(applySpeed)
+        .catch(useBrowserVoice);
     }
 
     function parseInput() {
