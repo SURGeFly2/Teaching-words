@@ -342,25 +342,20 @@
       audio.pause();
       audio.src = ttsUrl;
       audio.volume = 1;
-      let fallbackStarted = false;
       const applySpeed = () => {
         audio.playbackRate = speechSpeed * 0.8;
       };
       audio.addEventListener('loadedmetadata', applySpeed, { once: true });
       applySpeed();
 
-      const useBrowserVoice = () => {
-        if (fallbackStarted || !('speechSynthesis' in window)) return;
-        fallbackStarted = true;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.rate = speechSpeed * 0.8;
-        window.speechSynthesis.speak(utterance);
+      const showAudioError = () => {
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = 'Не удалось загрузить голос Google. Проверьте интернет-соединение.';
+        errorDiv.style.display = 'block';
       };
 
-      audio.onerror = useBrowserVoice;
-      audio.play().then(applySpeed).catch(useBrowserVoice);
+      audio.onerror = showAudioError;
+      audio.play().then(applySpeed).catch(showAudioError);
     }
 
     function parseInput() {
