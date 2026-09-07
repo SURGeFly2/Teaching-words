@@ -172,7 +172,7 @@
       align-items: center;
       gap: 16px;
       cursor: pointer;
-      user-select: text;
+      user-select: none;
       transition: border-color 0.2s ease, transform 0.1s ease;
       min-height: 58px;
     }
@@ -198,7 +198,7 @@
       gap: 8px;
       font-size: 17px;
       flex: 1;
-      min-width: 0;
+      flex-wrap: wrap;
       line-height: 1.4;
     }
 
@@ -220,8 +220,6 @@
       padding: 2px 8px;
       transition: filter 0.2s ease, background 0.2s ease, color 0.2s ease;
       display: inline-block;
-      cursor: pointer;
-      white-space: nowrap;
     }
 
     .eng-word.revealed {
@@ -236,8 +234,8 @@
       border: none;
       color: #71717a;
       cursor: pointer;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       padding: 0;
       border-radius: 6px;
       display: inline-flex;
@@ -246,15 +244,13 @@
       transition: color 0.2s ease, background-color 0.2s ease;
       
       /* Сдвиг на 3px влево и 5px вверх */
-      transform: translate(-3px, -6px);
+      transform: translate(-3px, -5px); 
       flex-shrink: 0;
-      order: 2;
-      margin-left: 2px;
     }
 
     .audio-btn svg {
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
       stroke: currentColor;
       fill: none;
       display: block;
@@ -274,14 +270,6 @@
       }
       .word-card {
         padding: 14px;
-      }
-      .word-content {
-        gap: 5px;
-        font-size: 15px;
-      }
-      .global-speed-control {
-        gap: 8px;
-        padding: 10px;
       }
     }
   </style>
@@ -349,10 +337,15 @@
       const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
       const audio = new Audio(ttsUrl);
       audio.playbackRate = speechSpeed;
+      
       audio.play().catch(() => {
-        const errorDiv = document.getElementById('error');
-        errorDiv.textContent = 'Не удалось загрузить голос Google. Проверьте интернет-соединение.';
-        errorDiv.style.display = 'block';
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'en-US';
+          utterance.rate = speechSpeed;
+          window.speechSynthesis.speak(utterance);
+        }
       });
     }
 
@@ -426,6 +419,7 @@
       wordsData.forEach((item, index) => {
         const card = document.createElement('div');
         card.className = 'word-card';
+        card.onclick = () => toggleWord(index);
 
         const numSpan = document.createElement('span');
         numSpan.className = 'word-num';
@@ -445,11 +439,6 @@
         const engSpan = document.createElement('span');
         engSpan.className = 'eng-word' + (item.revealed ? ' revealed' : '');
         engSpan.textContent = item.eng;
-        engSpan.title = 'Нажмите, чтобы открыть или скрыть слово';
-        engSpan.onclick = event => {
-          event.stopPropagation();
-          toggleWord(index);
-        };
 
         const audioBtn = document.createElement('button');
         audioBtn.className = 'audio-btn';
