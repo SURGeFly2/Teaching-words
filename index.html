@@ -337,7 +337,7 @@
       const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
       const audio = new Audio(ttsUrl);
       const applySpeed = () => {
-        audio.playbackRate = speechSpeed;
+        audio.playbackRate = speechSpeed * 0.8;
       };
       audio.addEventListener('loadedmetadata', applySpeed, { once: true });
       applySpeed();
@@ -347,7 +347,7 @@
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = 'en-US';
-          utterance.rate = speechSpeed;
+          utterance.rate = speechSpeed * 0.8;
           window.speechSynthesis.speak(utterance);
         }
       });
