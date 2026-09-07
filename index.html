@@ -342,21 +342,25 @@
       audio.pause();
       audio.src = ttsUrl;
       audio.volume = 1;
+      let fallbackStarted = false;
       const applySpeed = () => {
         audio.playbackRate = speechSpeed * 0.8;
       };
       audio.addEventListener('loadedmetadata', applySpeed, { once: true });
       applySpeed();
-      
-      audio.play().then(applySpeed).catch(() => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'en-US';
-          utterance.rate = speechSpeed * 0.8;
-          window.speechSynthesis.speak(utterance);
-        }
-      });
+
+      const useBrowserVoice = () => {
+        if (fallbackStarted || !('speechSynthesis' in window)) return;
+        fallbackStarted = true;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = speechSpeed * 0.8;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      audio.onerror = useBrowserVoice;
+      audio.play().then(applySpeed).catch(useBrowserVoice);
     }
 
     function parseInput() {
