@@ -311,12 +311,10 @@
 
     <div id="error" class="error-msg"></div>
     <div class="word-list" id="wordList"></div>
-    <audio id="ttsAudio" preload="none"></audio>
   </div>
 
   <script>
     let wordsData = [];
-    let currentAudio = null;
     const defaultSpeechSpeed = Math.min(2, Math.max(0.25, Math.round((Number(localStorage.getItem('vocab_speech_speed')) || 0.75) / 0.25) * 0.25));
     let speechSpeed = defaultSpeechSpeed;
 
@@ -348,51 +346,14 @@
         event.stopPropagation();
       }
 
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-      }
-
-      const audio = document.getElementById('ttsAudio');
-      currentAudio = audio;
-      audio.pause();
-      audio.preload = 'auto';
-      audio.playsInline = true;
-      audio.volume = 1;
-      const applySpeed = () => {
-        audio.playbackRate = speechSpeed;
-      };
-      audio.addEventListener('loadedmetadata', applySpeed, { once: true });
-      applySpeed();
-
-      const googleHosts = ['translate.google.co.uk', 'translate.google.com'];
-      let hostIndex = 0;
-      let retrying = false;
-
-      const showAudioError = () => {
+      const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
+      const audio = new Audio(ttsUrl);
+      audio.playbackRate = speechSpeed;
+      audio.play().catch(() => {
         const errorDiv = document.getElementById('error');
         errorDiv.textContent = 'Не удалось загрузить голос Google. Проверьте интернет-соединение.';
         errorDiv.style.display = 'block';
-      };
-
-      const tryGoogleHost = () => {
-        if (retrying) return;
-        retrying = true;
-
-        if (hostIndex >= googleHosts.length) {
-          showAudioError();
-          return;
-        }
-
-        const ttsUrl = 'https://' + googleHosts[hostIndex++] + '/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&total=1&idx=0&textlen=' + text.length + '&q=' + encodeURIComponent(text);
-        audio.src = ttsUrl;
-        applySpeed();
-        retrying = false;
-        audio.play().then(applySpeed).catch(tryGoogleHost);
-      };
-
-      audio.onerror = tryGoogleHost;
-      tryGoogleHost();
+      });
     }
 
     function parseInput() {
