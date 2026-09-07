@@ -242,10 +242,9 @@
       align-items: center;
       justify-content: center;
       transition: color 0.2s ease, background-color 0.2s ease;
-      
-      /* Сдвиг на 3px влево и 5px вверх */
       transform: translate(-3px, -5px); 
       flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .audio-btn svg {
@@ -299,14 +298,25 @@
 
     <div id="error" class="error-msg"></div>
     <div class="word-list" id="wordList"></div>
-    <audio id="ttsAudio" preload="none" playsinline></audio>
   </div>
 
   <script>
     let wordsData = [];
-    let currentAudio = null;
+    let voices = [];
     const defaultSpeechSpeed = Math.min(2, Math.max(0.25, Math.round((Number(localStorage.getItem('vocab_speech_speed')) || 0.75) / 0.25) * 0.25));
     let speechSpeed = defaultSpeechSpeed;
+
+    // Предзагрузка голосов для мобильных браузеров (iOS Safari / Android Chrome)
+    function loadVoices() {
+      if ('speechSynthesis' in window) {
+        voices = window.speechSynthesis.getVoices();
+      }
+    }
+
+    if ('speechSynthesis' in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       const savedInput = localStorage.getItem('vocab_saved_text');
@@ -336,27 +346,28 @@
         event.stopPropagation();
       }
 
-      const audio = document.getElementById('ttsAudio');
-      const ttsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=' + encodeURIComponent(text);
-      currentAudio = audio;
-      audio.pause();
-      audio.src = ttsUrl;
-      audio.volume = 1;
-      const applySpeed = () => {
-        audio.playbackRate = speechSpeed * 0.8;
-      };
-      audio.addEventListener('loadedmetadata', applySpeed, { once: true });
-      applySpeed();
-      
-      audio.play().then(applySpeed).catch(() => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'en-US';
-          utterance.rate = speechSpeed * 0.8;
-          window.speechSynthesis.speak(utterance);
-        }
-      });
+      if (!('speechSynthesis' in window)) {
+        alert('Ваш браузер не поддерживает озвучку текста.');
+        return;
+      }
+
+      // Сбрасываем текущую речь перед запуском новой
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = speechSpeed;
+
+      // Выбираем лучший английский голос (особенно важно для iOS)
+      if (voices.length === 0) {
+        voices = window.speechSynthesis.getVoices();
+      }
+      const englishVoice = voices.find(v => v.lang.startsWith('en-US') || v.lang.startsWith('en'));
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
     }
 
     function parseInput() {
